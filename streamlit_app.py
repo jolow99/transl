@@ -1,5 +1,4 @@
 # streamlit_app.py
-
 import streamlit as st
 from st_supabase_connection import SupabaseConnection
 from datetime import datetime
@@ -46,6 +45,27 @@ for sensor_id, data in sensors_data.items():
     # Last updated    
     st.write("Last Updated:", datetime.fromisoformat(latest["timestamp"]).strftime('%B %d, %Y, %H:%M'))
 
+# Pump Controls
+st.header("Manual Pump Controls")
+
+# Display current pump status
+pump_statuses = conn.query("*", table="sprinkler", ttl="0").execute().data
+# sort based on sensor number to ensure it always displays in the same order
+pump_statuses = sorted(pump_statuses, key=lambda k: k['sensor_num'])
+
+for status in pump_statuses: 
+    pump_status = status["instruct"]
+    sensor_num = status["sensor_num"]
+    if pump_status:
+        st.text(f"Pump {sensor_num} is currently switched on.")
+        if st.button("Turn Pump Off", key=sensor_num):
+            conn.table('sprinkler').update({"instruct": False}).filter("sensor_num", "eq", sensor_num ).execute()
+            st.rerun()
+    else:
+        st.text(f"Pump {sensor_num} is currently switched off.")
+        if st.button("Turn Pump On", key=sensor_num):
+            conn.table('sprinkler').update({"instruct": True}).filter("sensor_num", "eq", sensor_num ).execute()
+            st.rerun()
 
 # Display raw data
 st.table(rows.data)
